@@ -3,6 +3,8 @@ package analysis.exercise2;
 import analysis.FileStateFact;
 import analysis.ForwardAnalysis;
 import analysis.VulnerabilityReporter;
+import analysis.FileStateFact.FileState;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,7 +35,25 @@ public class TypeStateAnalysis extends ForwardAnalysis<Set<FileStateFact>> {
 	protected void flowThrough(@Nonnull Set<FileStateFact> in, @Nonnull Stmt stmt, @Nonnull Set<FileStateFact> out) {
 		copy(in, out);
 		// TODO: Implement your flow function here.
-		// MethodSignature currentMethodSig = method.getSignature();
+		MethodSignature currentMethodSig = method.getSignature();
+		if(stmt instanceof JAssignStmt && ((JAssignStmt) stmt).getRightOp() instanceof JVirtualInvokeExpr){
+			FileStateFact stateFact = new FileStateFact(FileState.Init);
+			stateFact.addAlias(((JAssignStmt) stmt).getLeftOp());
+			out.add(stateFact);
+		}
+		if(stmt instanceof JInvokeStmt){
+			JVirtualInvokeExpr virtualInvokeExpr = (JVirtualInvokeExpr) stmt.getInvokeExpr();			
+			Value receiver = virtualInvokeExpr.getBase();
+			for (FileStateFact fileStateFact : out) {
+				if(fileStateFact.containsAlias(receiver)){
+					if(currentMethodSig.getName().equals("open")){
+					fileStateFact.updateState(FileState.Open);
+				}
+				if(currentMethodSig.getName().equals("close")){
+					fileStateFact.updateState(FileState.Close);
+				}
+			}			
+		}
 		// this.reporter.reportVulnerability(currentMethodSig, stmt);
 		prettyPrint(in, stmt, out);
 
